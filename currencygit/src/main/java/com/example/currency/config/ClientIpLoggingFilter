@@ -1,0 +1,35 @@
+package com.example.currency.config;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger; import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+@Component
+public class ClientIpLoggingFilter extends OncePerRequestFilter {
+  private static final Logger log = LoggerFactory.getLogger(ClientIpLoggingFilter.class);
+
+  @Override
+  protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+      throws java.io.IOException, jakarta.servlet.ServletException {
+
+    String ip = extractClientIp(req);
+    String path = req.getMethod() + " " + req.getRequestURI();
+    log.info("Client IP: {} -> {}", ip, path);
+
+    chain.doFilter(req, res);
+  }
+
+  private String extractClientIp(HttpServletRequest request) {
+    String xff = request.getHeader("X-Forwarded-For");
+    if (xff != null && !xff.isBlank()) {
+      // XFF birden fazla IP içerebilir; ilki istemcidir
+      return xff.split(",")[0].trim();
+    }
+    String xri = request.getHeader("X-Real-IP");
+    if (xri != null && !xri.isBlank()) return xri.trim();
+    return request.getRemoteAddr(); // yedek
+  }
+}
