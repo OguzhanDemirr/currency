@@ -17,6 +17,11 @@ public class CurrencyController {
     public CurrencyController(CurrencyService service) {
         this.service = service;
     }
+    
+    @GetMapping("/latest")
+    public ResponseEntity<?> latest(@RequestParam String base) {
+        return getLatest(base); // mevcut /latest/{base} metodunu çağır
+    }
 
     // 1) Taban para birimine göre tüm kurları getir
     // Örnek: GET /api/currency/latest/USD
