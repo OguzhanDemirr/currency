@@ -10,7 +10,7 @@ public class CorsConfig implements WebMvcConfigurer {
   public void addCorsMappings(CorsRegistry registry) {
     registry.addMapping("/**")
       // İstersen geçici olarak * bırak; prod'da UI domainini yaz
-      .allowedOrigins("https://<SENİN-UI-ADIN>.onrender.com", "http://localhost:5173", "https://localhost:5173", "*")
+      .allowedOrigins("https://currency-ui2.onrender.com", "http://localhost:5173", "https://localhost:5173", "*")
       .allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
       .allowedHeaders("*");
   }
