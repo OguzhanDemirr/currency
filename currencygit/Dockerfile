@@ -1,15 +1,11 @@
-# -------- Build stage --------
-FROM gradle:8.7.0-jdk21 AS build
-WORKDIR /workspace
+FROM eclipse-temurin:21-jdk AS builder
+WORKDIR /app
 COPY . .
-RUN gradle clean bootJar -x test
+RUN chmod +x ./gradlew
+RUN ./gradlew clean bootJar -x test --no-daemon --stacktrace
 
-# -------- Run stage --------
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /workspace/build/libs/*.jar app.jar
-
-ENV PORT=8080
+COPY --from=builder /app/build/libs/*.jar app.jar
 EXPOSE 8080
-
-ENTRYPOINT ["sh","-c","java -Dserver.port=$PORT -jar /app/app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]
