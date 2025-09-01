@@ -55,13 +55,23 @@ public class CurrencyController {
     // 3) Son 10 işlemi getir (history)
     // Örnek: GET /api/currency/history?base=USD&target=TRY
     @GetMapping("/history")
-    public ResponseEntity<?> history(
+    public ResponseEntity<?> getHistory(
             @RequestParam String base,
-            @RequestParam String target
+            @RequestParam String target,
+            @RequestParam(required = false) Integer limit, // ör: 10
+            @RequestParam(required = false) Integer days  // ör: 30
     ) {
-        List<ConversionLog> logs = service.serviceHistory(base, target);
-        return ResponseEntity.ok(logs);
+        // days parametresi verilirse GRAFİK modu (tüm gün aralığını döndür)
+        if (days != null && days > 0) {
+            List<ConversionLog> list = service.getHistoryLastDays(base, target, days);
+            return ResponseEntity.ok(list);
+        }
+        // aksi halde LİSTE modu: son 'limit' kayıt (varsayılan 10)
+        int lim = (limit == null || limit <= 0) ? 10 : limit;
+        List<ConversionLog> recent = service.getRecentHistory(base, target, lim);
+        return ResponseEntity.ok(recent);
     }
+
 
     // Basit bir inline response modeli
     static class ConversionResponse {
