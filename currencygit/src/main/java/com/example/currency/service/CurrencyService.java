@@ -5,41 +5,51 @@ import com.example.currency.entity.ConversionLog;
 import com.example.currency.repository.ConversionLogRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Service
 public class CurrencyService {
 
     private final ConversionLogRepository repo;
-    private final ExternalRateClient external; // dış kur API'sini çağırdığın client (sen ne kullanıyorsan)
+    private final RestTemplate restTemplate;
 
-    public CurrencyService(ConversionLogRepository repo, ExternalRateClient external) {
+    // open.er-api.com endpoint’i
+    private static final String LATEST_URL = "https://open.er-api.com/v6/latest/{base}";
+
+    public CurrencyService(ConversionLogRepository repo, RestTemplate restTemplate) {
         this.repo = repo;
-        this.external = external;
+        this.restTemplate = restTemplate;
     }
 
-    /* Controller'ın çağırdığı METOTLAR */
-
+    /** Harici API'den latest kurları getir */
     public ExchangeApiResponse getLatestRates(String base) {
-        // senin mevcut implementasyonun (open.er-api vs.)
-        return external.fetchLatest(base);
+        String b = base == null ? "USD" : base.toUpperCase(Locale.ROOT);
+        return restTemplate.getForObject(LATEST_URL, ExchangeApiResponse.class, b);
     }
 
+    /** Dönüşüm yap + log kaydet, converted sonucu döndür */
     public Double convert(String base, String target, double amount) {
-        // senin mevcut implementasyonun
-        // 1) latest rate al
-        // 2) amount * rate
-        // 3) ConversionLog kaydet
-        Double rate = external.getRate(base, target);
+        String b = base.toUpperCase(Locale.ROOT);
+        String t = target.toUpperCase(Locale.ROOT);
+
+        ExchangeApiResponse resp = getLatestRates(b);
+        if (resp == null || resp.getRates() == null) return null;
+
+        Map<String, Double> rates = resp.getRates();
+        Double rate = rates.get(t);
         if (rate == null) return null;
 
         double converted = amount * rate;
-        // log kaydı (entity alan adlarına göre doldur)
+
+        // Log kaydı
         ConversionLog log = new ConversionLog();
-        log.setBaseCode(base.toUpperCase());
-        log.setTargetCode(target.toUpperCase());
+        log.setBaseCode(b);
+        log.setTargetCode(t);
         log.setRate(rate);
         log.setAmount(amount);
         log.setConverted(converted);
@@ -49,18 +59,21 @@ public class CurrencyService {
         return converted;
     }
 
-    // Tablo: son 'limit' kayıt (DESC)
+    /** Tablo için: son 'limit' kayıt (en yeni → eski) */
     public List<ConversionLog> getRecentHistory(String base, String target, int limit) {
-        return repo.findByBaseCodeAndTargetCodeOrderByCreatedAtDesc(
-                base.toUpperCase(), target.toUpperCase(), PageRequest.of(0, limit)
-        ).getContent();
+        String b = base.toUpperCase(Locale.ROOT);
+        String t = target.toUpperCase(Locale.ROOT);
+        return repo
+                .findByBaseCodeAndTargetCodeOrderByCreatedAtDesc(b, t, PageRequest.of(0, limit))
+                .getContent();
     }
 
-    // Grafik: son 'days' gün (ASC)
+    /** Grafik için: son 'days' gün (eski → yeni) */
     public List<ConversionLog> getHistoryLastDays(String base, String target, int days) {
+        String b = base.toUpperCase(Locale.ROOT);
+        String t = target.toUpperCase(Locale.ROOT);
         LocalDateTime after = LocalDateTime.now().minusDays(days);
-        return repo.findByBaseCodeAndTargetCodeAndCreatedAtGreaterThanEqualOrderByCreatedAtAsc(
-                base.toUpperCase(), target.toUpperCase(), after
-        );
+        return repo
+                .findByBaseCodeAndTargetCodeAndCreatedAtGreaterThanEqualOrderByCreatedAtAsc(b, t, after);
     }
 }
