@@ -1,12 +1,16 @@
-package com.example.currency.repository;
-
-import com.example.currency.entity.ConversionLog;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import java.time.LocalDateTime;
 
 public interface ConversionLogRepository extends JpaRepository<ConversionLog, Long> {
-    List<ConversionLog> findTop10ByBaseCodeIgnoreCaseAndTargetCodeIgnoreCaseOrderByCreatedAtDesc(
-            String baseCode, String targetCode
+
+    // Liste tablosu: en yeni 10 kayıt (createdAt DESC)
+    Page<ConversionLog> findByBaseCodeAndTargetCodeOrderByCreatedAtDesc(
+        String baseCode, String targetCode, Pageable pageable
+    );
+
+    // Grafik: son N gün (createdAt >= after), zaman ekseni için ASC
+    List<ConversionLog> findByBaseCodeAndTargetCodeAndCreatedAtGreaterThanEqualOrderByCreatedAtAsc(
+        String baseCode, String targetCode, LocalDateTime after
     );
 }
